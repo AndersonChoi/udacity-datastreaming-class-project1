@@ -1,6 +1,57 @@
 # Optimizing-Public-Transportation
 Udacity data stream project01
 
+## How to run?
+
+### Running on your computer
+
+<pre><code>$ docker-compose up</code></pre>
+
+- Public Transit Status : http://localhost:8888
+- kafka : PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094
+- REST proxy : http://localhost:8082
+- Schema Registry : http://localhost:8081
+- Kafka Connect : http://localhost:8083
+- KSQL : http://localhost:8088
+- PostgreSQL : jdbc:postgresql://localhost:5432/cta
+  - username : cta_admin
+  - password : chicago
+  
+### Running the simulation
+
+#### Run producer:
+
+1) cd producers
+2) virtualenv venv
+3) . venv/bin/activate
+4) pip install -r requirements.txt
+5) python simulation.py
+
+#### Run faust stream processing application:
+
+1) cd consumers
+2) virtualenv venv
+3) . venv/bin/activate
+4) pip install -r requirements.txt
+5) faust -A faust_stream worker -l info
+
+#### Run KSQL creation script:
+
+1) cd consumers
+2) virtualenv venv
+3) . venv/bin/activate
+4) pip install -r requirements.txt
+5) python ksql.py
+
+#### Run consumer:
+
+1) cd consumers
+2) virtualenv venv
+3) . venv/bin/activate
+4) pip install -r requirements.txt
+5) python server.py
+
+
 ## PROJECT SPECIFICATION
 
 ### Kafka Producer
