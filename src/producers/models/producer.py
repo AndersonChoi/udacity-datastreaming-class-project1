@@ -17,12 +17,7 @@ class Producer:
     existing_topics = set([])
 
     def __init__(
-        self,
-        topic_name,
-        key_schema,
-        value_schema=None,
-        num_partitions=1,
-        num_replicas=1,
+            self, topic_name, key_schema, value_schema, num_partitions=1, num_replicas=1
     ):
         """Initializes a Producer object with basic settings"""
         self.topic_name = topic_name
@@ -31,9 +26,9 @@ class Producer:
         self.num_partitions = num_partitions
         self.num_replicas = num_replicas
 
-        # Configure the broker properties below.
         self.broker_properties = {
-            'PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094'
+            "bootstrap.servers": "PLAINTEXT://localhost:9092",
+            "schema.registry.url": "http://localhost:8081",
         }
 
         # If the topic does not already exist, try to create it
@@ -41,27 +36,46 @@ class Producer:
             self.create_topic()
             Producer.existing_topics.add(self.topic_name)
 
-        # Configure the AvroProducer
-        self.producer = AvroProducer({
-        'bootstrap.servers': self.broker_properties,
-        'schema.registry.url': 'http://localhost:8081'
-        }, default_key_schema=key_schema, default_value_schema=value_schema)
+        # TODO: Configure the AvroProducer
+        self.producer = AvroProducer(
+            self.broker_properties,
+            default_key_schema=key_schema,
+            default_value_schema=value_schema,
+        )
 
     def create_topic(self):
-        admin_client = AdminClient({"bootstrap.servers": self.broker_properties})
-        topic_list.append(NewTopic(topic_name, 1, 1))
-        fs = admin_client.create_topics(topic_list)
-        for topic, f in fs.items():
-            try:
-                f.result()  # The result itself is None
-                print("Topic {} created".format(topic))
-            except Exception as e:
-                print("Failed to create topic {}: {}".format(topic, e))
-
-    def close(self):
-        self.producer.flush()
-        logger.info("producer close incomplete - skipping")
+        logger.info("beginning topic creation for %s", self.topic_name)
+        client = AdminClient(
+            {"bootstrap.servers": self.broker_properties["bootstrap.servers"]}
+        )
+        topic_metadata = client.list_topics(timeout=5)
+        if self.topic_name in set(
+                t.topic for t in iter(topic_metadata.topics.values())
+        ):
+            logger.info("not recreating existing topic %s", self.topic_name)
+            return
+        logger.info(
+            "creating topic %s with partition %s replicas %s",
+            self.topic_name,
+            self.num_partitions,
+            self.num_replicas,
+        )
+        client.create_topics(
+            [
+                NewTopic(
+                    topic=self.topic_name,
+                    num_partitions=self.num_partitions,
+                    replication_factor=self.num_replicas,
+                )
+            ]
+        )
 
     def time_millis(self):
-        """Use this function to get the key for Kafka Events"""
         return int(round(time.time() * 1000))
+
+    def close(self):
+        """Prepares the producer for exit by cleaning up the producer"""
+        # TODO: Write cleanup code for the Producer here
+        if self.producer is not None:
+            logger.debug("flushing producer...")
+            self.producer.flush()
